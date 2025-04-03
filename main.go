@@ -6,7 +6,19 @@ import (
 	"os"
 )
 
+const banner = `
+  ____  _       _____                _           
+ |  _ \(_)     |  __ \              | |          
+ | |_) |_ _ __ | |__) |___  __ _  __| | ___ _ __ 
+ |  _ <| | '_ \|  _  // _ \/ _` + "`" + ` |/ _` + "`" + ` |/ _ \ '__|
+ | |_) | | | | | | \ \  __/ (_| | (_| |  __/ |   
+ |____/|_|_| |_|_|  \_\___|\__,_|\__,_|\___|_|   
+                                                
+`
+
 func main() {
+	fmt.Print(banner)
+
 	// Define CLI flags
 	filePath := flag.String("file", "", "Path to the .bin file")
 	flag.StringVar(filePath, "f", "", "Path to the .bin file (shorthand)")
@@ -27,7 +39,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// For now, just display the raw data (PHP unserialize not directly supported)
+	// For now, just display the raw data
 	fmt.Println("File content (raw):")
 	fmt.Println(string(fileData))
 }
