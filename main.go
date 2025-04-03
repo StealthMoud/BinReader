@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/knightsc/gapstone"
 	"os"
 	"strings"
 	"time"
@@ -41,13 +42,15 @@ func main() {
 	flag.StringVar(searchPattern, "s", "", "Search for a string in the file (shorthand)")
 	compareFile := flag.String("compare", "", "Compare with another .bin file")
 	flag.StringVar(compareFile, "c", "", "Compare with another .bin file (shorthand)")
+	disassemble := flag.Bool("disassemble", false, "Disassemble file content as machine code (x86-64)")
+	flag.BoolVar(disassemble, "dasm", false, "Disassemble file content as machine code (x86-64, shorthand)")
 
 	flag.Parse()
 
 	// Check if file path is provided
 	if *filePath == "" {
 		fmt.Println("Error: Please specify a file with --file/-f")
-		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern] [--compare/-c other.bin]")
+		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern] [--compare/-c other.bin] [--disassemble/-dasm]")
 		os.Exit(1)
 	}
 
@@ -170,6 +173,30 @@ func main() {
 			outputBuffer.WriteString(fmt.Sprintf("Differences found: %d\n", len(differences)))
 			for _, diff := range differences {
 				outputBuffer.WriteString(fmt.Sprintf("  %s\n", diff))
+			}
+		}
+		outputBuffer.WriteString("\n")
+	}
+
+	if *disassemble {
+		outputBuffer.WriteString("Disassembled Machine Code (x86-64):\n")
+		engine, err := gapstone.New(
+			gapstone.CS_ARCH_X86,
+			gapstone.CS_MODE_64,
+		)
+		if err != nil {
+			outputBuffer.WriteString(fmt.Sprintf("Failed to initialize disassembler: %v\n", err))
+		} else {
+			defer engine.Close()
+			insns, err := engine.Disasm(fileData, 0x0, 0) // Starting address 0x0
+			if err != nil {
+				outputBuffer.WriteString(fmt.Sprintf("Failed to disassemble: %v\n", err))
+			} else if len(insns) == 0 {
+				outputBuffer.WriteString("No valid instructions found\n")
+			} else {
+				for _, insn := range insns {
+					outputBuffer.WriteString(fmt.Sprintf("%08x  %-12s %s\n", insn.Address, insn.Mnemonic, insn.OpStr))
+				}
 			}
 		}
 		outputBuffer.WriteString("\n")
