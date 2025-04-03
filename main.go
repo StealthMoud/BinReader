@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -28,6 +30,8 @@ func main() {
 	flag.StringVar(outputFile, "o", "", "Save output to a file (shorthand)")
 	maxSize := flag.Int64("max-size", 10*1024*1024, "Maximum file size in bytes (default: 10MB)")
 	flag.Int64Var(maxSize, "m", 10*1024*1024, "Maximum file size in bytes (shorthand, default: 10MB)")
+	hexDump := flag.Bool("hex", false, "Display file content as a hex dump")
+	flag.BoolVar(hexDump, "x", false, "Display file content as a hex dump (shorthand)")
 
 	flag.Parse()
 
@@ -64,10 +68,22 @@ func main() {
 	}
 
 	// Prepare output
-	output := "File content (raw):\n" + string(fileData) + "\n"
-	if *verbose {
-		output = fmt.Sprintf("File: %s\nSize: %d bytes\nRaw bytes: %v\n%s", *filePath, len(fileData), fileData, output)
+	var outputBuffer bytes.Buffer
+	if *hexDump {
+		outputBuffer.WriteString("Hex dump of file content:\n")
+		outputBuffer.WriteString(hex.Dump(fileData))
+	} else {
+		outputBuffer.WriteString("File content (raw):\n")
+		outputBuffer.WriteString(string(fileData))
+		outputBuffer.WriteString("\n")
 	}
+
+	if *verbose {
+		verboseOutput := fmt.Sprintf("File: %s\nSize: %d bytes\nRaw bytes: %v\n", *filePath, len(fileData), fileData)
+		outputBuffer.WriteString(verboseOutput)
+	}
+
+	output := outputBuffer.String()
 
 	// Display output
 	fmt.Print(output)
