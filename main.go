@@ -22,6 +22,10 @@ func main() {
 	// Define CLI flags
 	filePath := flag.String("file", "", "Path to the .bin file")
 	flag.StringVar(filePath, "f", "", "Path to the .bin file (shorthand)")
+	verbose := flag.Bool("verbose", false, "Show detailed output")
+	flag.BoolVar(verbose, "v", false, "Show detailed output (shorthand)")
+	outputFile := flag.String("output", "", "Save output to a file")
+	flag.StringVar(outputFile, "o", "", "Save output to a file (shorthand)")
 
 	flag.Parse()
 
@@ -39,7 +43,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// For now, just display the raw data
-	fmt.Println("File content (raw):")
-	fmt.Println(string(fileData))
+	// Prepare output
+	output := "File content (raw):\n" + string(fileData) + "\n"
+	if *verbose {
+		output = fmt.Sprintf("File: %s\nSize: %d bytes\nRaw bytes: %v\n%s", *filePath, len(fileData), fileData, output)
+	}
+
+	// Display output
+	fmt.Print(output)
+
+	// Save to file if specified
+	if *outputFile != "" {
+		err = os.WriteFile(*outputFile, []byte(output), 0644)
+		if err != nil {
+			fmt.Printf("Error: Unable to write to output file '%s': %v\n", *outputFile, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Output saved to '%s'\n", *outputFile)
+	}
 }
