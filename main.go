@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 const banner = `
@@ -32,6 +33,8 @@ func main() {
 	flag.Int64Var(maxSize, "m", 10*1024*1024, "Maximum file size in bytes (shorthand, default: 10MB)")
 	hexDump := flag.Bool("hex", false, "Display file content as a hex dump")
 	flag.BoolVar(hexDump, "x", false, "Display file content as a hex dump (shorthand)")
+	showMetadata := flag.Bool("metadata", false, "Show file metadata")
+	flag.BoolVar(showMetadata, "d", false, "Show file metadata (shorthand)")
 
 	flag.Parse()
 
@@ -42,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Get file info for validation
+	// Get file info for validation and metadata
 	fileInfo, err := os.Stat(*filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -69,6 +72,19 @@ func main() {
 
 	// Prepare output
 	var outputBuffer bytes.Buffer
+
+	// Add metadata if requested
+	if *showMetadata {
+		outputBuffer.WriteString("File Metadata:\n")
+		outputBuffer.WriteString(fmt.Sprintf("  Name: %s\n", fileInfo.Name()))
+		outputBuffer.WriteString(fmt.Sprintf("  Size: %d bytes\n", fileSize))
+		outputBuffer.WriteString(fmt.Sprintf("  Modified: %s\n", fileInfo.ModTime().Format(time.RFC1123)))
+		// Creation time is not directly available on all platforms, use ModTime as a fallback
+		outputBuffer.WriteString(fmt.Sprintf("  Last Accessed: %s\n", fileInfo.ModTime().Format(time.RFC1123)))
+		outputBuffer.WriteString("\n")
+	}
+
+	// Add file content (hex or raw)
 	if *hexDump {
 		outputBuffer.WriteString("Hex dump of file content:\n")
 		outputBuffer.WriteString(hex.Dump(fileData))
@@ -78,6 +94,7 @@ func main() {
 		outputBuffer.WriteString("\n")
 	}
 
+	// Add verbose details if requested
 	if *verbose {
 		verboseOutput := fmt.Sprintf("File: %s\nSize: %d bytes\nRaw bytes: %v\n", *filePath, len(fileData), fileData)
 		outputBuffer.WriteString(verboseOutput)
