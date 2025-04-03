@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,13 +36,15 @@ func main() {
 	flag.BoolVar(hexDump, "x", false, "Display file content as a hex dump (shorthand)")
 	showMetadata := flag.Bool("metadata", false, "Show file metadata")
 	flag.BoolVar(showMetadata, "d", false, "Show file metadata (shorthand)")
+	searchPattern := flag.String("search", "", "Search for a string in the file")
+	flag.StringVar(searchPattern, "s", "", "Search for a string in the file (shorthand)")
 
 	flag.Parse()
 
 	// Check if file path is provided
 	if *filePath == "" {
 		fmt.Println("Error: Please specify a file with --file/-f")
-		fmt.Println("Usage: bin-reader --file path/to/file.bin")
+		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern]")
 		os.Exit(1)
 	}
 
@@ -98,6 +101,26 @@ func main() {
 	if *verbose {
 		verboseOutput := fmt.Sprintf("File: %s\nSize: %d bytes\nRaw bytes: %v\n", *filePath, len(fileData), fileData)
 		outputBuffer.WriteString(verboseOutput)
+	}
+
+	if *searchPattern != "" {
+		outputBuffer.WriteString(fmt.Sprintf("Searching for pattern: %q\n", *searchPattern))
+		offsets := []int{}
+		contentStr := string(fileData)
+		for i := 0; ; i++ {
+			pos := strings.Index(contentStr[i:], *searchPattern)
+			if pos == -1 {
+				break
+			}
+			offsets = append(offsets, i+pos)
+			i += pos + len(*searchPattern) - 1
+		}
+		if len(offsets) > 0 {
+			outputBuffer.WriteString(fmt.Sprintf("Found %d matches at offsets: %v\n", len(offsets), offsets))
+		} else {
+			outputBuffer.WriteString("No matches found\n")
+		}
+		outputBuffer.WriteString("\n")
 	}
 
 	output := outputBuffer.String()
