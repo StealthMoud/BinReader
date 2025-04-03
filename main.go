@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/fatih/color"
 	"os"
 	"strings"
 	"time"
@@ -176,8 +177,19 @@ func main() {
 
 	output := outputBuffer.String()
 
-	// Display output
-	fmt.Print(output)
+	// Colorize output
+	green := color.New(color.FgGreen).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+
+	coloredOutput := output
+	coloredOutput = strings.ReplaceAll(coloredOutput, "File content (raw):", green("File content (raw):"))
+	coloredOutput = strings.ReplaceAll(coloredOutput, "Hex dump of file content:", green("Hex dump of file content:"))
+	coloredOutput = strings.ReplaceAll(coloredOutput, "File Metadata:", yellow("File Metadata:"))
+	coloredOutput = strings.ReplaceAll(coloredOutput, "Searching for pattern:", yellow("Searching for pattern:"))
+	coloredOutput = strings.ReplaceAll(coloredOutput, "Comparing", yellow("Comparing"))
+	coloredOutput = strings.ReplaceAll(coloredOutput, "Error:", red("Error:"))
+	fmt.Print(coloredOutput)
 
 	// Save to file if specified
 	if *outputFile != "" {
