@@ -38,13 +38,15 @@ func main() {
 	flag.BoolVar(showMetadata, "d", false, "Show file metadata (shorthand)")
 	searchPattern := flag.String("search", "", "Search for a string in the file")
 	flag.StringVar(searchPattern, "s", "", "Search for a string in the file (shorthand)")
+	compareFile := flag.String("compare", "", "Compare with another .bin file")
+	flag.StringVar(compareFile, "c", "", "Compare with another .bin file (shorthand)")
 
 	flag.Parse()
 
 	// Check if file path is provided
 	if *filePath == "" {
 		fmt.Println("Error: Please specify a file with --file/-f")
-		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern]")
+		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern] [--compare/-c other.bin]")
 		os.Exit(1)
 	}
 
@@ -119,6 +121,55 @@ func main() {
 			outputBuffer.WriteString(fmt.Sprintf("Found %d matches at offsets: %v\n", len(offsets), offsets))
 		} else {
 			outputBuffer.WriteString("No matches found\n")
+		}
+		outputBuffer.WriteString("\n")
+	}
+
+	if *compareFile != "" {
+		// Validate and read the second file
+		compareInfo, err := os.Stat(*compareFile)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Printf("Error: Comparison file '%s' does not exist\n", *compareFile)
+			} else {
+				fmt.Printf("Error: Unable to access comparison file '%s': %v\n", *compareFile, err)
+			}
+			os.Exit(1)
+		}
+		if compareInfo.Size() > *maxSize {
+			fmt.Printf("Error: Comparison file '%s' size (%d bytes) exceeds maximum allowed size (%d bytes)\n", *compareFile, compareInfo.Size(), *maxSize)
+			os.Exit(1)
+		}
+
+		compareData, err := os.ReadFile(*compareFile)
+		if err != nil {
+			fmt.Printf("Error: Unable to read comparison file '%s': %v\n", *compareFile, err)
+			os.Exit(1)
+		}
+
+		// Compare the files
+		outputBuffer.WriteString(fmt.Sprintf("Comparing '%s' with '%s':\n", *filePath, *compareFile))
+		if bytes.Equal(fileData, compareData) {
+			outputBuffer.WriteString("Files are identical\n")
+		} else {
+			outputBuffer.WriteString("Files differ\n")
+			minLen := len(fileData)
+			if len(compareData) < minLen {
+				minLen = len(compareData)
+			}
+			differences := []string{}
+			for i := 0; i < minLen; i++ {
+				if fileData[i] != compareData[i] {
+					differences = append(differences, fmt.Sprintf("Offset %d: %x vs %x", i, fileData[i], compareData[i]))
+				}
+			}
+			if len(fileData) != len(compareData) {
+				differences = append(differences, fmt.Sprintf("Length mismatch: %d vs %d bytes", len(fileData), len(compareData)))
+			}
+			outputBuffer.WriteString(fmt.Sprintf("Differences found: %d\n", len(differences)))
+			for _, diff := range differences {
+				outputBuffer.WriteString(fmt.Sprintf("  %s\n", diff))
+			}
 		}
 		outputBuffer.WriteString("\n")
 	}
