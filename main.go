@@ -26,6 +26,8 @@ func main() {
 	flag.BoolVar(verbose, "v", false, "Show detailed output (shorthand)")
 	outputFile := flag.String("output", "", "Save output to a file")
 	flag.StringVar(outputFile, "o", "", "Save output to a file (shorthand)")
+	maxSize := flag.Int64("max-size", 10*1024*1024, "Maximum file size in bytes (default: 10MB)")
+	flag.Int64Var(maxSize, "m", 10*1024*1024, "Maximum file size in bytes (shorthand, default: 10MB)")
 
 	flag.Parse()
 
@@ -33,6 +35,24 @@ func main() {
 	if *filePath == "" {
 		fmt.Println("Error: Please specify a file with --file/-f")
 		fmt.Println("Usage: bin-reader --file path/to/file.bin")
+		os.Exit(1)
+	}
+
+	// Get file info for validation
+	fileInfo, err := os.Stat(*filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("Error: File '%s' does not exist\n", *filePath)
+		} else {
+			fmt.Printf("Error: Unable to access file '%s': %v\n", *filePath, err)
+		}
+		os.Exit(1)
+	}
+
+	// Check file size against maxSize
+	fileSize := fileInfo.Size()
+	if fileSize > *maxSize {
+		fmt.Printf("Error: File '%s' size (%d bytes) exceeds maximum allowed size (%d bytes)\n", *filePath, fileSize, *maxSize)
 		os.Exit(1)
 	}
 
