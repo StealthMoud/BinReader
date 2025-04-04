@@ -5,12 +5,15 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/elliotchance/phpserialize"
 	"github.com/fatih/color"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
+// Banner to print at startup.
 const banner = `
   ____  _       _____                _           
  |  _ \(_)     |  __ \              | |          
@@ -20,6 +23,85 @@ const banner = `
  |____/|_|_| |_|_|  \_\___|\__,_|\__,_|\___|_|   
                                                 
 `
+
+// extractTopLevelKeys scans a PHP serialized string (top-level only)
+// and extracts the keys in the order they appear.
+// This is a simple parser that works for basic serialized arrays.
+func extractTopLevelKeys(serialized string) ([]string, error) {
+	// Find the opening '{' and the matching closing '}'
+	start := strings.Index(serialized, "{")
+	end := strings.LastIndex(serialized, "}")
+	if start == -1 || end == -1 || end <= start {
+		return nil, fmt.Errorf("invalid serialized string")
+	}
+	content := serialized[start+1 : end]
+	keys := []string{}
+	i := 0
+	for i < len(content) {
+		// Look for a key starting with 's:'
+		if content[i] == 's' && i+1 < len(content) && content[i+1] == ':' {
+			// Find the next colon after the length
+			j := i + 2
+			for j < len(content) && content[j] != ':' {
+				j++
+			}
+			if j >= len(content) {
+				break
+			}
+			// Extract the length as an integer
+			numStr := content[i+2 : j]
+			n, err := strconv.Atoi(numStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid string length: %v", err)
+			}
+			// Expect the next character to be a double quote
+			if j+1 >= len(content) || content[j+1] != '"' {
+				return nil, fmt.Errorf("expected '\"' after length")
+			}
+			// Extract the key (n characters starting from j+2)
+			if j+2+n > len(content) {
+				return nil, fmt.Errorf("string length exceeds content")
+			}
+			key := content[j+2 : j+2+n]
+			keys = append(keys, key)
+			// Advance i past the key and its closing '";'
+			i = j + 2 + n + 2
+		} else {
+			i++
+		}
+	}
+	return keys, nil
+}
+
+// printMapToBuffer writes a formatted version of the map to the provided buffer.
+// For the top-level map, we supply the keys in the original order.
+func printMapToBuffer(buf *bytes.Buffer, data map[interface{}]interface{}, indent int, keys []interface{}) {
+	indentation := strings.Repeat("  ", indent)
+	for _, key := range keys {
+		// Look up the key in the map. (It may be a string.)
+		var value interface{}
+		// Try both the key as given and as a string.
+		if v, ok := data[key]; ok {
+			value = v
+		} else if v, ok := data[fmt.Sprintf("%v", key)]; ok {
+			value = v
+		} else {
+			continue
+		}
+		switch v := value.(type) {
+		case map[interface{}]interface{}:
+			buf.WriteString(fmt.Sprintf("%s- %v:\n", indentation, key))
+			// For nested maps, we don't have the original order, so iterate in arbitrary order.
+			nestedKeys := []interface{}{}
+			for nk := range v {
+				nestedKeys = append(nestedKeys, nk)
+			}
+			printMapToBuffer(buf, v, indent+1, nestedKeys)
+		default:
+			buf.WriteString(fmt.Sprintf("%s- %v: %v\n", indentation, key, v))
+		}
+	}
+}
 
 func main() {
 	fmt.Print(banner)
@@ -41,13 +123,15 @@ func main() {
 	flag.StringVar(searchPattern, "s", "", "Search for a string in the file (shorthand)")
 	compareFile := flag.String("compare", "", "Compare with another .bin file")
 	flag.StringVar(compareFile, "c", "", "Compare with another .bin file (shorthand)")
+	phpParse := flag.Bool("php", false, "Parse content as PHP serialized data")
+	flag.BoolVar(phpParse, "p", false, "Parse content as PHP serialized data (shorthand)")
 
 	flag.Parse()
 
 	// Check if file path is provided
 	if *filePath == "" {
 		fmt.Println("Error: Please specify a file with --file/-f")
-		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern] [--compare/-c other.bin]")
+		fmt.Println("Usage: bin-reader --file path/to/file.bin [--verbose/-v] [--output/-o output.txt] [--max-size/-m bytes] [--hex/-x] [--metadata/-d] [--search/-s pattern] [--compare/-c other.bin] [--php/-p]")
 		os.Exit(1)
 	}
 
@@ -76,7 +160,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Prepare output
+	// Prepare output buffer
 	var outputBuffer bytes.Buffer
 
 	// Add metadata if requested
@@ -85,19 +169,21 @@ func main() {
 		outputBuffer.WriteString(fmt.Sprintf("  Name: %s\n", fileInfo.Name()))
 		outputBuffer.WriteString(fmt.Sprintf("  Size: %d bytes\n", fileSize))
 		outputBuffer.WriteString(fmt.Sprintf("  Modified: %s\n", fileInfo.ModTime().Format(time.RFC1123)))
-		// Creation time is not directly available on all platforms, use ModTime as a fallback
+		// Creation time is not directly available on all platforms, using ModTime as fallback
 		outputBuffer.WriteString(fmt.Sprintf("  Last Accessed: %s\n", fileInfo.ModTime().Format(time.RFC1123)))
 		outputBuffer.WriteString("\n")
 	}
 
-	// Add file content (hex or raw)
-	if *hexDump {
-		outputBuffer.WriteString("Hex dump of file content:\n")
-		outputBuffer.WriteString(hex.Dump(fileData))
-	} else {
-		outputBuffer.WriteString("File content (raw):\n")
-		outputBuffer.WriteString(string(fileData))
-		outputBuffer.WriteString("\n")
+	// Only show file content if PHP parsing is not enabled
+	if !*phpParse {
+		if *hexDump {
+			outputBuffer.WriteString("Hex dump of file content:\n")
+			outputBuffer.WriteString(hex.Dump(fileData))
+		} else {
+			outputBuffer.WriteString("File content (raw):\n")
+			outputBuffer.WriteString(string(fileData))
+			outputBuffer.WriteString("\n")
+		}
 	}
 
 	// Add verbose details if requested
@@ -106,6 +192,7 @@ func main() {
 		outputBuffer.WriteString(verboseOutput)
 	}
 
+	// Search for pattern if provided
 	if *searchPattern != "" {
 		outputBuffer.WriteString(fmt.Sprintf("Searching for pattern: %q\n", *searchPattern))
 		offsets := []int{}
@@ -126,6 +213,7 @@ func main() {
 		outputBuffer.WriteString("\n")
 	}
 
+	// Compare with another file if requested
 	if *compareFile != "" {
 		// Validate and read the second file
 		compareInfo, err := os.Stat(*compareFile)
@@ -171,6 +259,33 @@ func main() {
 			for _, diff := range differences {
 				outputBuffer.WriteString(fmt.Sprintf("  %s\n", diff))
 			}
+		}
+		outputBuffer.WriteString("\n")
+	}
+
+	// If PHP parse flag is set, parse and pretty-print the PHP serialized data.
+	if *phpParse {
+		outputBuffer.WriteString("PHP Serialized Data (parsed):\n")
+		// Extract the top-level key order from the serialized string.
+		topKeys, err := extractTopLevelKeys(string(fileData))
+		if err != nil {
+			outputBuffer.WriteString(fmt.Sprintf("Error extracting key order: %v\n", err))
+		}
+
+		var parsedData map[interface{}]interface{}
+		err = phpserialize.Unmarshal(fileData, &parsedData)
+		if err != nil {
+			outputBuffer.WriteString(fmt.Sprintf("Failed to parse as PHP serialized data: %v\n", err))
+		} else {
+			// Convert extracted keys (if any) to a slice of interface{}
+			keys := []interface{}{}
+			for _, k := range topKeys {
+				keys = append(keys, k)
+			}
+			// Use a buffer to collect pretty output.
+			var buf bytes.Buffer
+			printMapToBuffer(&buf, parsedData, 0, keys)
+			outputBuffer.WriteString(buf.String())
 		}
 		outputBuffer.WriteString("\n")
 	}

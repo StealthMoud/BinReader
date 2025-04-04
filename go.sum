@@ -1,12 +1,14 @@
+github.com/elliotchance/phpserialize v1.4.0 h1:cAp/9+KSnEbUC8oYCE32n2n84BeW8HOY3HMDI8hG2OY=
+github.com/elliotchance/phpserialize v1.4.0/go.mod h1:gt7XX9+ETUcLXbtTKEuyrqW3lcLUAeS/AnGZ2e49TZs=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
 github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
-github.com/knightsc/gapstone v4.0.1+incompatible h1:yROPRgpqBWgD/7fyH3+AJ2hQR4gYfKNFGnKcNY8HPIA=
-github.com/knightsc/gapstone v4.0.1+incompatible/go.mod h1:N9Q82fxOi8Fp9pHE2eflNZf5/FSg1815WZFhV8Gc2PE=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
 github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
 github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
+github.com/yvasiyarov/php_session_decoder v0.0.0-20180803065642-a065a3b0b7d1 h1:p/oCPaHILUSplKqfjFyvivh4UglLHDtzs6F/wfOzyJE=
+github.com/yvasiyarov/php_session_decoder v0.0.0-20180803065642-a065a3b0b7d1/go.mod h1:96w6piyt5Z2E86/J6EQPEn76UR4scqR9bS+Y9iJF/Og=
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.25.0 h1:r+8e+loiHxRqhXVl6ML1nO3l1+oFoWbnlu2Ehimmi34=
