@@ -22,6 +22,7 @@ A Go-based CLI tool to read and analyze `.bin` files.
    ```bash
    go build -o bin-reader
    ```
+
 ---
 
 ## Usage
@@ -42,6 +43,7 @@ A Go-based CLI tool to read and analyze `.bin` files.
 - `--metadata`, `-d`: Show file metadata (name, size, times)
 - `--search`, `-s`: Search for a string in the file
 - `--compare`, `-c`: Compare with another `.bin` file
+- `--php`, `-p`: Parse content as PHP serialized data and show the parsed output instead of the raw content
 
 ---
 
@@ -51,6 +53,7 @@ A Go-based CLI tool to read and analyze `.bin` files.
 ./bin-reader -f samples/sample1.bin -x -v
 ./bin-reader -f samples/sample1.bin -s "World" -d
 ./bin-reader -f samples/sample1.bin -c samples/sample2.bin
+./bin-reader -f samples/sample1.bin -p
 ```
 
 ---
@@ -60,6 +63,7 @@ A Go-based CLI tool to read and analyze `.bin` files.
 - Reads and displays raw or hex content of `.bin` files
 - Shows file metadata and searches for patterns
 - Compares two files and highlights differences
+- Parses PHP serialized data (using `-p`/`--php`) and shows output in the original key order
 - Colorized output for better readability
 
 ---
